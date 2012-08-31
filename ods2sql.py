@@ -50,7 +50,10 @@ class Element(list):
 		return list(filter(Element.only_known, self))
 
 	def cleanup(self):
-		while len(self) and self[-1].isempty():
+		while True:
+			if len(self) <= 0: break
+			if isinstance(self[-1], Element) and not self[-1].isempty(): break
+			if isinstance(self[-1], str): break
 			self.pop()
 
 
