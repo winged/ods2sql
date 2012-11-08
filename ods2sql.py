@@ -242,26 +242,35 @@ def char_iter(end):
 				rep += chars[mod]
 			yield rep
 
-def render(db):
+def render(db, rowtitles):
 	typemap = {
 		'string': 'TEXT',
 		'int':    'INTEGER',
 		'float':  'DOUBLE'
 	}
 
+
 	for table in db.children():
-		colnames = []
+		all_rows   = table.children()
+		if rowtitles:
+			header_row = all_rows[0]
+			rows       = all_rows[1:]
+			colnames   = [cell.content() for cell in header_row.children()]
+		else:
+			rows     = all_rows
+			colnames = list(char_iter(len(table.typemap)))
+
+
 		print('CREATE TABLE "%s"(' % table.name)
 		fields= []
 		fields.append('    "_id" INTEGER NOT NULL PRIMARY KEY')
-		for name, coltype in zip(char_iter(len(table.typemap)), table.typemap):
-			colnames.append(name)
+		for name, coltype in zip(colnames, table.typemap):
 			fields.append('    "%s" %s' % (name, typemap[coltype]))
 		print(",\n".join(fields))
 		print(");\n")
 
 		print("BEGIN TRANSACTION;")
-		for row in table.children():
+		for row in rows:
 			values = ['NULL']+["'%s'"% c.content().replace("'", "\\'") for c in row.children()]
 			cols = ",".join(['"_id"']+['"%s"'% x for x in colnames[0:len(values)-1]])
 			vals = ",".join(values)
@@ -271,5 +280,10 @@ def render(db):
 			
 
 
-render(parse())
+rowtitles = False
+if len(sys.argv) > 1 and sys.argv[1] == '--rowtitles':
+	# Use first row of every table as row titles.
+	rowtitles = True
+
+render(parse(), rowtitles)
 #print(showtree(parse()))
